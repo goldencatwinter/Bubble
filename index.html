@@ -10,7 +10,7 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #1a1a1a; 
+            background-color: #1a1a1a; /* 배경을 어둡게 처리하여 게임 화면 강조 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,14 +23,15 @@
 
         #game-wrapper {
             position: relative;
-            height: 100vh;
-            aspect-ratio: 9 / 16;
+            /* 4:6 비율 유지 및 최대 크기 설정 */
+            width: min(100vw, calc(100vh * 4 / 6));
+            height: min(100vh, calc(100vw * 6 / 4));
             background: linear-gradient(135deg, 
                 #576574, #54a0ff, #5f27cd, #ff9f43, #1dd1a1, #576574);
             background-size: 600% 600%;
             animation: mediumFlow 22s linear infinite;
             overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); /* 경계 구분을 위한 그림자 */
         }
 
         @keyframes mediumFlow {
@@ -56,6 +57,7 @@
             z-index: 1;
         }
 
+        /* UI Elements */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -89,6 +91,7 @@
             background: rgba(255, 255, 255, 0.05);
         }
 
+        /* Modal Styles */
         #ranking-modal {
             display: none;
             position: fixed;
@@ -135,6 +138,8 @@
             border-radius: 4px;
         }
 
+        #ranking-list li:last-child { border-bottom: none; }
+
         .rank-num { width: 35px; color: rgba(255,255,255,0.5); font-weight: bold; }
         .rank-name { flex-grow: 1; text-align: left; padding-left: 5px; opacity: 0.9; }
         .rank-score { font-weight: bold; color: white; }
@@ -157,6 +162,8 @@
             outline: none;
         }
 
+        #name-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
         .submit-btn {
             background: rgba(255, 255, 255, 0.8);
             border: none;
@@ -166,7 +173,10 @@
             font-weight: bold;
             cursor: pointer;
             border-radius: 8px;
+            transition: background 0.2s;
         }
+
+        .submit-btn:hover { background: rgba(255, 255, 255, 1); }
 
         .close-btn {
             display: block;
@@ -179,20 +189,6 @@
             cursor: pointer;
             font-size: 12px;
             text-decoration: underline;
-        }
-
-        @media (min-aspect-ratio: 9/16) {
-            #game-wrapper {
-                height: 100vh;
-                width: auto;
-            }
-        }
-        @media (max-aspect-ratio: 9/16) {
-            #game-wrapper {
-                width: 100vw;
-                height: auto;
-                aspect-ratio: 9 / 16;
-            }
         }
     </style>
 </head>
@@ -225,10 +221,6 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- 논리적 해상도 설정 (고정 비율) ---
-    const LOGICAL_WIDTH = 720;
-    const LOGICAL_HEIGHT = 1280;
-
     let db = null;
     let auth = null;
     let appId = 'bubble-pop-v1';
@@ -250,27 +242,14 @@
             db = getFirestore(app);
             appId = typeof __app_id !== 'undefined' ? __app_id : 'bubble-pop-v1';
 
-            // --- 인증 로직 수정: 커스텀 토큰 실패 시 익명 로그인으로 폴백 ---
-            const performAuth = async () => {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (tokenError) {
-                        console.error("Custom token sign-in failed, falling back to anonymous:", tokenError);
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                }
-            };
-
-            await performAuth();
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
 
             onAuthStateChanged(auth, (u) => { 
                 user = u; 
-                if (u) {
-                    console.log("Authenticated as:", u.uid);
-                }
             });
         } catch (error) {
             console.error("Firebase setup failed:", error);
@@ -279,6 +258,7 @@
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('game-wrapper');
 
     let score = 0;
     let bubbles = [];
@@ -290,11 +270,16 @@
     const pixelSize = 6; 
     const airFriction = 0.99; 
     const fluidFriction = 0.92; 
+
     const bubbleCache = {};
 
     window.openRanking = async () => {
         document.getElementById('ranking-modal').style.display = 'block';
-        if (db && user) await refreshRanking();
+        if (db && user) {
+            await refreshRanking();
+        } else {
+            document.getElementById('ranking-list').innerHTML = "<li>RANKING UNAVAILABLE</li>";
+        }
     };
 
     window.closeRanking = () => {
@@ -305,20 +290,34 @@
         if (!db || !user) return;
         const listEl = document.getElementById('ranking-list');
         listEl.innerHTML = "<li>UPDATING...</li>";
+
         try {
             const rankingRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
             const snapshot = await getDocs(rankingRef);
+            
             let rankings = [];
-            snapshot.forEach(doc => rankings.push(doc.data()));
+            snapshot.forEach(doc => { rankings.push(doc.data()); });
             rankings.sort((a, b) => b.score - a.score);
             const top10 = rankings.slice(0, 10);
-            listEl.innerHTML = top10.length === 0 ? "<li>NO RECORDS</li>" : "";
-            top10.forEach((item, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="rank-num">${index+1}</span><span class="rank-name">${item.name||'ANON'}</span><span class="rank-score">${item.score}</span>`;
-                listEl.appendChild(li);
-            });
-        } catch (e) { listEl.innerHTML = "<li>ERROR</li>"; }
+
+            listEl.innerHTML = "";
+            if (top10.length === 0) {
+                listEl.innerHTML = "<li>NO RECORDS YET</li>";
+            } else {
+                top10.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span class="rank-num">${index + 1}</span>
+                        <span class="rank-name">${item.name || 'ANON'}</span>
+                        <span class="rank-score">${item.score}</span>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+        } catch (e) { 
+            console.error(e);
+            listEl.innerHTML = "<li>ERROR LOADING</li>"; 
+        }
     }
 
     window.submitScore = async () => {
@@ -326,23 +325,38 @@
         const nameInput = document.getElementById('name-input');
         const name = nameInput.value.trim();
         if (!name) return;
+
         try {
             const rankingRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            await addDoc(rankingRef, { uid: user.uid, name: name, score: score, timestamp: Date.now() });
+            await addDoc(rankingRef, {
+                uid: user.uid,
+                name: name,
+                score: score,
+                timestamp: Date.now()
+            });
             nameInput.value = "";
             await refreshRanking();
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Error submitting", e); }
     };
 
     function initAudio() { 
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
     }
 
     function playPopSound(sizeType) {
         if (!audioCtx) return;
         const baseScale = [261.63, 293.66, 329.63, 392.00, 440.00];
-        let mult = sizeType === 'gigantic' ? 2 : sizeType === 'huge' ? 4 : sizeType === 'large' ? 8 : 16;
+        let mult = 2;
+        if (sizeType === 'gigantic') mult = 2;
+        else if (sizeType === 'huge') mult = 4;
+        else if (sizeType === 'large') mult = 8;
+        else mult = 16;
+        
         const freq = baseScale[Math.floor(Math.random() * baseScale.length)] * mult;
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
@@ -366,7 +380,8 @@
                     context.fillRect(
                         Math.floor((centerX + x) / pixelSize) * pixelSize,
                         Math.floor((centerY + y) / pixelSize) * pixelSize,
-                        pixelSize, pixelSize
+                        pixelSize,
+                        pixelSize
                     );
                 }
             }
@@ -487,7 +502,10 @@
             this.lifeTime++;
             if (this.isPopping) { this.popTimer--; if (this.popTimer <= 0) { this.splitPop(); return; } }
             if (!this.isContacting) {
-                if (this.vy < this.baseVy) { this.vy += 0.22; if (this.vy > this.baseVy) this.vy = this.baseVy; }
+                if (this.vy < this.baseVy) {
+                    this.vy += 0.22;
+                    if (this.vy > this.baseVy) this.vy = this.baseVy;
+                }
                 const breeze = Math.sin(this.lifeTime * 0.015 + this.windOffset) * this.windStrength;
                 this.x += this.vx + breeze; this.y += this.vy; this.vx *= airFriction;
             } else {
@@ -495,24 +513,31 @@
                 this.x += this.vx; this.y += this.vy;
             }
             if (this.x - this.radius < 0) { this.x = this.radius; this.vx *= -0.2; }
-            else if (this.x + this.radius > LOGICAL_WIDTH) { this.x = LOGICAL_WIDTH - this.radius; this.vx *= -0.2; }
+            else if (this.x + this.radius > canvas.width) { this.x = canvas.width - this.radius; this.vx *= -0.2; }
         }
         splitPop() {
             if (this.isDead) return;
             initAudio(); playPopSound(this.sizeType); createParticles(this.x, this.y); this.isDead = true;
-            let next = this.sizeType === 'gigantic' ? 'huge' : this.sizeType === 'huge' ? 'large' : this.sizeType === 'large' ? 'small' : null;
+            let next = null;
+            if (this.sizeType === 'gigantic') next = 'huge';
+            else if (this.sizeType === 'huge') next = 'large';
+            else if (this.sizeType === 'large') next = 'small';
+            
             if (next) {
                 const forceX = 2.25 + Math.random() * 1.1; 
                 const bounceY = -5.6 - Math.random() * 1.9; 
                 bubbles.push(new Bubble(this.x - 20, this.y, next, -forceX, bounceY));
                 bubbles.push(new Bubble(this.x + 20, this.y, next, forceX, bounceY));
             }
-            if (this.sizeType === 'small') score += 1;
+            
+            if (this.sizeType === 'small') {
+                score += 1;
+            }
         }
         resolveCollisions(others) {
             let supported = false;
-            if (this.y + this.radius >= LOGICAL_HEIGHT - 2) {
-                this.y = LOGICAL_HEIGHT - this.radius; this.vy *= -0.05; supported = true; this.isContacting = true; 
+            if (this.y + this.radius >= canvas.height - 2) {
+                this.y = canvas.height - this.radius; this.vy *= -0.05; supported = true; this.isContacting = true; 
             }
             for (let other of others) {
                 if (other === this || other.isDead) continue;
@@ -550,7 +575,7 @@
     }
 
     class BGStar {
-        constructor() { this.x = Math.random() * LOGICAL_WIDTH; this.y = Math.random() * LOGICAL_HEIGHT; }
+        constructor() { this.x = Math.random() * wrapper.clientWidth; this.y = Math.random() * wrapper.clientHeight; }
         draw() {
             const a = (Math.sin(globalTime * 0.003 + this.x) + 1) / 2 * 0.25;
             ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
@@ -561,8 +586,10 @@
     function createParticles(x, y) { for (let i = 0; i < 5; i++) particles.push(new Particle(x, y)); }
 
     function resize() {
-        canvas.width = LOGICAL_WIDTH;
-        canvas.height = LOGICAL_HEIGHT;
+        // Wrapper의 실제 렌더링 크기에 맞춰 캔버스 크기 조정
+        const rect = wrapper.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
         bgTwinkles = []; for(let i=0; i<40; i++) bgTwinkles.push(new BGStar());
         createBubbleTemplates();
     }
@@ -585,11 +612,11 @@
 
     function update() {
         globalTime = Date.now();
-        ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         bgTwinkles.forEach(t => t.draw());
         
         if (Math.random() < 0.01875 && bubbles.length < 150) { 
-            const x = Math.random() * LOGICAL_WIDTH;
+            const x = Math.random() * canvas.width;
             const opts = ['gigantic', 'huge', 'large', 'small'];
             bubbles.push(new Bubble(x, -150, opts[Math.floor(Math.random() * opts.length)]));
         }
@@ -599,16 +626,13 @@
         bubbles.forEach(b => { b.update(); b.draw(); });
         particles = particles.filter(p => p.alpha > 0);
         particles.forEach(p => { p.update(); p.draw(); });
-        drawScore(ctx, score.toString(), LOGICAL_WIDTH / 2, 120);
+        drawScore(ctx, score.toString(), canvas.width / 2, 120);
         requestAnimationFrame(update);
     }
 
     function handleInteraction(ex, ey) {
         const rect = canvas.getBoundingClientRect();
-        const scale = LOGICAL_WIDTH / rect.width;
-        const mx = (ex - rect.left) * scale;
-        const my = (ey - rect.top) * scale;
-
+        const mx = ex - rect.left, my = ey - rect.top;
         initAudio();
         for (let i = bubbles.length - 1; i >= 0; i--) {
             const b = bubbles[i];
