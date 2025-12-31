@@ -184,7 +184,15 @@
 
     async function setupFirebase() {
         try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
+            const firebaseConfig = {
+  apiKey: "AIzaSyD4av5BrlF7dYRtahWQbrSy__7qzYX-vcc",
+  authDomain: "bubble-5c688.firebaseapp.com",
+  projectId: "bubble-5c688",
+  storageBucket: "bubble-5c688.firebasestorage.app",
+  messagingSenderId: "1081989950678",
+  appId: "1:1081989950678:web:8cfe7eaf160a73b9f66d77",
+  measurementId: "G-50G91VDZBS"
+};
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
