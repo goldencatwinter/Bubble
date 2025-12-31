@@ -110,7 +110,6 @@
         #ranking-list li { display: flex; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
         .input-group { display: flex; gap: 8px; margin-top: 25px; }
         
-        /* 숫자 입력 가능하도록 힌트 수정 및 스타일 */
         #name-input { 
             flex-grow: 1; 
             background: rgba(255, 255, 255, 0.1); 
@@ -132,7 +131,6 @@
             border-radius: 8px; 
         }
 
-        /* 픽셀 스타일의 글자만 있는 Close 버튼 */
         #close-btn {
             display: block;
             margin: 20px auto 0;
@@ -167,7 +165,6 @@
     <div class="modal-header" id="modal-title">WORLD TOP 10</div>
     <ul id="ranking-list"><li>LOADING...</li></ul>
     <div class="input-group" id="input-area">
-        <!-- 알파벳과 숫자 입력 가능 -->
         <input type="text" id="name-input" placeholder="NAME (A-Z, 0-9)" maxlength="10" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '')">
         <button class="submit-btn" onclick="submitScore()">SAVE</button>
     </div>
@@ -185,14 +182,14 @@
     async function setupFirebase() {
         try {
             const firebaseConfig = {
-  apiKey: "AIzaSyD4av5BrlF7dYRtahWQbrSy__7qzYX-vcc",
-  authDomain: "bubble-5c688.firebaseapp.com",
-  projectId: "bubble-5c688",
-  storageBucket: "bubble-5c688.firebasestorage.app",
-  messagingSenderId: "1081989950678",
-  appId: "1:1081989950678:web:8cfe7eaf160a73b9f66d77",
-  measurementId: "G-50G91VDZBS"
-};
+                apiKey: "AIzaSyD4av5BrlF7dYRtahWQbrSy__7qzYX-vcc",
+                authDomain: "bubble-5c688.firebaseapp.com",
+                projectId: "bubble-5c688",
+                storageBucket: "bubble-5c688.firebasestorage.app",
+                messagingSenderId: "1081989950678",
+                appId: "1:1081989950678:web:8cfe7eaf160a73b9f66d77",
+                measurementId: "G-50G91VDZBS"
+            };
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
@@ -215,6 +212,10 @@
     const MAX_HP = 30;
     let bubbles = [], particles = [], bgTwinkles = [], globalTime = 0, audioCtx = null;
     let isGameOver = false;
+
+    // Delta Time variables
+    let lastTime = performance.now();
+    const TARGET_FPS = 60; // 60프레임을 기준으로 물리 연산 수치 조절
 
     const pixelSize = 6;
     const bubbleCache = {};
@@ -381,15 +382,18 @@
             drawSoapBubble(ctx, this.x, this.y, this.radius, this.hSeed, this.sizeType, a);
         }
 
-        update() {
-            this.lifeTime++;
-            if (this.isPopping && --this.popTimer <= 0) this.splitPop();
+        update(dt) {
+            this.lifeTime += dt;
+            if (this.isPopping) {
+                this.popTimer -= dt;
+                if (this.popTimer <= 0) this.splitPop();
+            }
             
-            this.vy += this.baseGravity;
-            this.y += this.vy; 
+            this.vy += this.baseGravity * dt;
+            this.y += this.vy * dt; 
             
             if (this.pattern === 'zigzag') {
-                this.x += this.vx;
+                this.x += this.vx * dt;
                 if (this.x - this.radius < 0) {
                     this.x = this.radius;
                     this.vx = Math.abs(this.vx);
@@ -399,7 +403,7 @@
                 }
             } else {
                 const sway = Math.sin(this.lifeTime * 0.015 + this.swayOffset) * this.swayStrength * 5;
-                this.x += this.vx + sway;
+                this.x += (this.vx + sway) * dt;
                 if (this.x - this.radius < 0) { 
                     this.x = this.radius; 
                     this.vx *= -0.2; 
@@ -435,7 +439,6 @@
             for(let i=0; i<6; i++) particles.push(new Particle(this.x, this.y));
             let next = this.sizeType === 'gigantic' ? 'huge' : this.sizeType === 'huge' ? 'large' : this.sizeType === 'large' ? 'small' : null;
             if (next) { 
-                // 분열 시 튀어오르는 높이 10% 감소 (0.6 -> 0.54)
                 const bounceStrength = 0.54; 
                 bubbles.push(new Bubble(this.x - 25, this.y, next, -0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
                 bubbles.push(new Bubble(this.x + 25, this.y, next, 0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
@@ -452,7 +455,11 @@
             this.vy = (Math.random()-0.5)*8; 
             this.alpha = 1; this.decay = 0.04; 
         }
-        update() { this.x += this.vx; this.y += this.vy; this.alpha -= this.decay; }
+        update(dt) { 
+            this.x += this.vx * dt; 
+            this.y += this.vy * dt; 
+            this.alpha -= this.decay * dt; 
+        }
         draw() { 
             ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = 'white'; 
             ctx.fillRect(Math.floor(this.x/pixelSize)*pixelSize, Math.floor(this.y/pixelSize)*pixelSize, pixelSize, pixelSize); 
@@ -493,7 +500,15 @@
         }
     }
 
-    function update() {
+    let spawnTimer = 0;
+    function update(timestamp) {
+        // Calculate Delta Time
+        const dt = (timestamp - lastTime) / (1000 / TARGET_FPS);
+        lastTime = timestamp;
+        
+        // Skip huge jumps (like when switching tabs)
+        const frameDt = Math.min(dt, 3.0);
+
         globalTime = Date.now();
         ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
         bgTwinkles.forEach(t => { 
@@ -502,22 +517,26 @@
             ctx.fillRect(Math.floor(t.x/pixelSize)*pixelSize, Math.floor(t.y/pixelSize)*pixelSize, pixelSize, pixelSize); 
         });
         
-        if (!isGameOver && Math.random() < 0.0156 && bubbles.length < 100) {
-            const r = Math.random();
-            let s = r < 0.40 ? 'small' : r < 0.70 ? 'large' : r < 0.95 ? 'huge' : 'gigantic';
-            bubbles.push(new Bubble(Math.random()*LOGICAL_WIDTH, -150, s));
+        if (!isGameOver) {
+            spawnTimer += frameDt;
+            if (spawnTimer >= 32 && bubbles.length < 100) { 
+                const r = Math.random();
+                let s = r < 0.40 ? 'small' : r < 0.70 ? 'large' : r < 0.95 ? 'huge' : 'gigantic';
+                bubbles.push(new Bubble(Math.random()*LOGICAL_WIDTH, -150, s));
+                spawnTimer = 0;
+            }
         }
 
         checkClusters(); 
         
         bubbles = bubbles.filter(b => !b.isDead);
         bubbles.forEach(b => { 
-            if (!isGameOver) b.update(); 
+            if (!isGameOver) b.update(frameDt); 
             b.draw(); 
         });
         
         particles = particles.filter(p => p.alpha > 0);
-        particles.forEach(p => { p.update(); p.draw(); });
+        particles.forEach(p => { p.update(frameDt); p.draw(); });
 
         ctx.font = "bold 77px 'Silkscreen'"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,0.3)";
         ctx.fillText(score.toString(), LOGICAL_WIDTH/2, 140);
@@ -626,7 +645,8 @@
             }
         }, {passive: false});
 
-        update();
+        lastTime = performance.now();
+        requestAnimationFrame(update);
     };
 </script>
 </body>
