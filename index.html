@@ -71,21 +71,28 @@
             z-index: 10;
         }
 
+        /* 랭킹 버튼 수정: 테두리 제거 및 초기 상태 숨김 */
         .ranking-btn {
+            display: none; /* 초기 상태 숨김 */
             position: absolute;
             top: 40px;
             right: 20px;
             padding: 10px 18px;
             background: transparent;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: none; /* 테두리 제거 */
             color: rgba(255, 255, 255, 0.7);
             font-family: 'Silkscreen', cursive;
-            font-size: 14px;
+            font-size: 16px; /* 가독성을 위해 살짝 키움 */
             cursor: pointer;
             pointer-events: auto;
-            border-radius: 6px;
             backdrop-filter: blur(4px);
             transition: all 0.2s;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .ranking-btn:hover {
+            color: white;
+            transform: scale(1.1);
         }
 
         #ranking-modal {
@@ -155,7 +162,8 @@
     <div id="game-wrapper">
         <div class="overlay"></div>
         <div id="ui-layer">
-            <button class="ranking-btn" onclick="openRanking()">RANKING</button>
+            <!-- 랭킹 버튼 아이디 추가 -->
+            <button id="rank-btn-ui" class="ranking-btn" onclick="openRanking()">RANKING</button>
         </div>
         <canvas id="gameCanvas"></canvas>
     </div>
@@ -349,12 +357,11 @@
             else if (sizeType === 'large') speedFactor = 0.64;
             else if (sizeType === 'small') speedFactor = 0.512;
 
-            // 중력 및 초기 낙하 속도 (오리지널 물리치 복구 및 속도 상향)
+            // 중력 및 초기 낙하 속도
             this.baseGravity = 0.15 * speedFactor * speedBoost; 
             const speedScale = 1.2 * speedFactor * speedBoost;
             const rawSpeed = (1.0 + Math.random() * 0.2);
             
-            // 분열 시 위로 튕기기 위해 전달받은 vy가 있으면 그대로 사용
             this.vy = vy !== null ? vy : rawSpeed * speedScale;
 
             if (vx === null) {
@@ -418,7 +425,6 @@
                 }
             }
             
-            // 화면 아래로 나가면 데미지
             if (this.y - this.radius > LOGICAL_HEIGHT) {
                 this.isDead = true;
                 if (!isGameOver) {
@@ -446,7 +452,6 @@
             
             let next = this.sizeType === 'gigantic' ? 'huge' : this.sizeType === 'huge' ? 'large' : this.sizeType === 'large' ? 'small' : null;
             if (next) { 
-                // 분열 시 위로 튕겨 올라가는 물리 효과 (vy 값을 음수로 설정)
                 const bounceUpPower = -8.0 - Math.random() * 5.0; 
                 bubbles.push(new Bubble(this.x - 30, this.y, next, -1.2, bounceUpPower)); 
                 bubbles.push(new Bubble(this.x + 30, this.y, next, 1.2, bounceUpPower)); 
@@ -494,6 +499,9 @@
 
     async function handleGameOver() {
         isGameOver = true;
+        // 게임 오버 시 랭킹 버튼 보이기
+        document.getElementById('rank-btn-ui').style.display = 'block';
+        
         if (db && user) {
             try {
                 const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
@@ -523,7 +531,6 @@
         
         if (!isGameOver) {
             spawnTimer += frameDt;
-            // 속도가 빨라졌으므로 스폰 주기도 조금 당김
             if (spawnTimer >= 14 && bubbles.length < 100) { 
                 const r = Math.random();
                 let s = r < 0.35 ? 'small' : r < 0.65 ? 'large' : r < 0.90 ? 'huge' : 'gigantic';
@@ -560,7 +567,10 @@
 
     function restartGame() {
         score = 0; hp = MAX_HP; bubbles = []; particles = [];
-        isGameOver = false; closeRanking();
+        isGameOver = false; 
+        // 재시작 시 랭킹 버튼 숨기기
+        document.getElementById('rank-btn-ui').style.display = 'none';
+        closeRanking();
     }
 
     window.openRanking = async (isNewRecord = false) => { 
