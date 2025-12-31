@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Pop - World Ranking Edition</title>
+    <title>Bubble Pop - Zen Flow Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -21,15 +21,24 @@
             touch-action: none;
         }
 
-        #game-wrapper {
+        #game-container {
             position: relative;
+            width: 1024px;
+            height: 768px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        #game-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             background: linear-gradient(135deg, 
                 #576574, #54a0ff, #5f27cd, #ff9f43, #1dd1a1, #576574);
             background-size: 600% 600%;
             animation: mediumFlow 22s linear infinite;
-            overflow: hidden;
         }
 
         @keyframes mediumFlow {
@@ -57,17 +66,14 @@
 
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
             z-index: 10;
         }
 
         .ranking-btn {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 20px;
             padding: 10px 18px;
             background: transparent;
@@ -82,132 +88,90 @@
             transition: all 0.2s;
         }
 
-        .ranking-btn:hover {
-            border-color: rgba(255, 255, 255, 0.6);
-            color: rgba(255, 255, 255, 1);
-            background: rgba(255, 255, 255, 0.05);
-        }
-
         #ranking-modal {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: 85%;
             max-width: 380px;
-            background: rgba(255, 255, 255, 0.15); 
-            backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(25px);
             border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
             padding: 25px;
             z-index: 100;
             border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
             pointer-events: auto;
         }
 
-        .modal-header {
-            font-size: 22px;
-            text-align: center;
-            margin-bottom: 25px;
-            color: white;
-            letter-spacing: 2px;
-            opacity: 0.9;
+        .modal-header { font-size: 22px; text-align: center; margin-bottom: 25px; letter-spacing: 2px; }
+        #ranking-list { list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 14px; }
+        #ranking-list li { display: flex; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
+        .input-group { display: flex; gap: 8px; margin-top: 25px; }
+        
+        /* 숫자 입력 가능하도록 힌트 수정 및 스타일 */
+        #name-input { 
+            flex-grow: 1; 
+            background: rgba(255, 255, 255, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            color: white; 
+            padding: 12px; 
+            font-family: 'Silkscreen'; 
+            border-radius: 8px; 
+            outline: none; 
         }
 
-        #ranking-list {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px 0;
-            font-size: 14px;
+        .submit-btn { 
+            background: rgba(255, 255, 255, 0.8); 
+            border: none; 
+            padding: 0 15px; 
+            color: #444; 
+            font-family: 'Silkscreen'; 
+            cursor: pointer; 
+            border-radius: 8px; 
         }
 
-        #ranking-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.05);
-            margin-bottom: 4px;
-            border-radius: 4px;
-        }
-
-        .rank-num { width: 35px; color: rgba(255,255,255,0.5); font-weight: bold; }
-        .rank-name { flex-grow: 1; text-align: left; padding-left: 5px; opacity: 0.9; }
-        .rank-score { font-weight: bold; color: white; }
-
-        .input-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 25px;
-        }
-
-        #name-input {
-            flex-grow: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px;
-            font-family: 'Silkscreen';
-            font-size: 12px;
-            border-radius: 8px;
-            outline: none;
-        }
-
-        #name-input::placeholder { color: rgba(255, 255, 255, 0.4); }
-
-        .submit-btn {
-            background: rgba(255, 255, 255, 0.8);
-            border: none;
-            padding: 0 15px;
-            color: #444;
-            font-family: 'Silkscreen';
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-
-        .submit-btn:hover { background: rgba(255, 255, 255, 1); }
-
-        .close-btn {
+        /* 픽셀 스타일의 글자만 있는 Close 버튼 */
+        #close-btn {
             display: block;
             margin: 20px auto 0;
             background: transparent;
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
             border: none;
-            padding: 5px 15px;
-            font-family: 'Silkscreen';
             cursor: pointer;
-            font-size: 12px;
+            font-family: 'Silkscreen';
+            font-size: 14px;
+            letter-spacing: 1px;
+            transition: color 0.2s;
+        }
+        #close-btn:hover {
+            color: white;
             text-decoration: underline;
         }
     </style>
 </head>
 <body>
 
-<div id="game-wrapper">
-    <div class="overlay"></div>
-    <div id="ui-layer">
-        <button class="ranking-btn" onclick="openRanking()">RANKING</button>
+<div id="game-container">
+    <div id="game-wrapper">
+        <div class="overlay"></div>
+        <div id="ui-layer">
+            <button class="ranking-btn" onclick="openRanking()">RANKING</button>
+        </div>
+        <canvas id="gameCanvas"></canvas>
     </div>
-    <canvas id="gameCanvas"></canvas>
 </div>
 
-<!-- Ranking Modal -->
 <div id="ranking-modal">
-    <div class="modal-header">WORLD TOP 10</div>
-    <ul id="ranking-list">
-        <li>LOADING...</li>
-    </ul>
-    
-    <div class="input-group">
-        <input type="text" id="name-input" placeholder="ENGLISH ONLY" maxlength="10" oninput="this.value = this.value.replace(/[^a-zA-Z]/g, '')">
+    <div class="modal-header" id="modal-title">WORLD TOP 10</div>
+    <ul id="ranking-list"><li>LOADING...</li></ul>
+    <div class="input-group" id="input-area">
+        <!-- 알파벳과 숫자 입력 가능 -->
+        <input type="text" id="name-input" placeholder="NAME (A-Z, 0-9)" maxlength="10" oninput="this.value = this.value.replace(/[^a-zA-Z0-9]/g, '')">
         <button class="submit-btn" onclick="submitScore()">SAVE</button>
     </div>
-    <button class="close-btn" onclick="closeRanking()">CLOSE</button>
+    <button id="close-btn" onclick="closeRanking()">CLOSE</button>
 </div>
 
 <script type="module">
@@ -215,152 +179,67 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    let db = null;
-    let auth = null;
-    let appId = 'bubble-pop-v1';
-    let user = null;
+    let db = null, auth = null, user = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'bubble-pop-v1';
 
     async function setupFirebase() {
         try {
-            const firebaseConfig = {
-                apiKey: "", 
-                authDomain: "bubble-5c688.firebaseapp.com",
-                projectId: "bubble-5c688",
-                storageBucket: "bubble-5c688.firebasestorage.app",
-                messagingSenderId: "1081989950678",
-                appId: "1:1081989950678:web:8cfe7eaf160a73b9f66d77"
-            };
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-            appId = typeof __app_id !== 'undefined' ? __app_id : 'bubble-pop-v1';
-
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
             } else {
                 await signInAnonymously(auth);
             }
-
-            onAuthStateChanged(auth, (u) => { 
-                user = u; 
-            });
-        } catch (error) {
-            console.error("Firebase setup failed:", error);
-        }
+            onAuthStateChanged(auth, u => { user = u; });
+        } catch (e) { console.error(e); }
     }
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const LOGICAL_WIDTH = 1024;
+    const LOGICAL_HEIGHT = 768;
 
     let score = 0;
-    let bubbles = [];
-    let particles = [];
-    let bgTwinkles = []; 
-    let globalTime = 0;
-    let lastTime = 0; 
-    let audioCtx = null;
+    let hp = 30;
+    const MAX_HP = 30;
+    let bubbles = [], particles = [], bgTwinkles = [], globalTime = 0, audioCtx = null;
+    let isGameOver = false;
 
-    const pixelSize = 6; 
-    const airFriction = 0.99; 
-    const fluidFriction = 0.92; 
-
+    const pixelSize = 6;
     const bubbleCache = {};
 
-    window.openRanking = async () => {
-        document.getElementById('ranking-modal').style.display = 'block';
-        if (db && user) {
-            await refreshRanking();
-        } else {
-            document.getElementById('ranking-list').innerHTML = "<li>RANKING UNAVAILABLE</li>";
-        }
-    };
-
-    window.closeRanking = () => {
-        document.getElementById('ranking-modal').style.display = 'none';
-    };
-
-    async function refreshRanking() {
-        if (!db || !user) return;
-        const listEl = document.getElementById('ranking-list');
-        listEl.innerHTML = "<li>UPDATING...</li>";
-
-        try {
-            const rankingRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            const snapshot = await getDocs(rankingRef);
-            
-            let rankings = [];
-            snapshot.forEach(doc => { rankings.push(doc.data()); });
-            rankings.sort((a, b) => b.score - a.score);
-            const top10 = rankings.slice(0, 10);
-
-            listEl.innerHTML = "";
-            if (top10.length === 0) {
-                listEl.innerHTML = "<li>NO RECORDS YET</li>";
-            } else {
-                top10.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <span class="rank-num">${index + 1}</span>
-                        <span class="rank-name">${item.name || 'ANON'}</span>
-                        <span class="rank-score">${item.score}</span>
-                    `;
-                    listEl.appendChild(li);
-                });
-            }
-        } catch (e) { 
-            console.error(e);
-            listEl.innerHTML = "<li>ERROR LOADING</li>"; 
-        }
-    }
-
-    window.submitScore = async () => {
-        if (!db || !user || score === 0) return;
-        const nameInput = document.getElementById('name-input');
-        const name = nameInput.value.trim();
-        if (!name) return;
-
-        try {
-            const rankingRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            await addDoc(rankingRef, {
-                uid: user.uid,
-                name: name,
-                score: score,
-                timestamp: Date.now()
-            });
-            nameInput.value = "";
-            await refreshRanking();
-        } catch (e) { console.error("Error submitting", e); }
-    };
-
     function initAudio() { 
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+        if (audioCtx.state === 'suspended') audioCtx.resume(); 
     }
 
     function playPopSound(sizeType) {
         if (!audioCtx) return;
-        const baseScale = [261.63, 293.66, 329.63, 392.00, 440.00];
-        let mult = 2;
-        if (sizeType === 'gigantic') mult = 2;
-        else if (sizeType === 'huge') mult = 4;
-        else if (sizeType === 'large') mult = 8;
-        else mult = 16;
-        
-        const freq = baseScale[Math.floor(Math.random() * baseScale.length)] * mult;
+        const baseScale = [523.25, 587.33, 659.25, 783.99, 880.00];
+        const sizeOctave = sizeType === 'gigantic' ? 1 : sizeType === 'huge' ? 2 : sizeType === 'large' ? 4 : 8;
+        const freq = baseScale[Math.floor(Math.random() * baseScale.length)] * sizeOctave;
         const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, now);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.08, now + 0.005);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2); 
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 1.3);
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(freq * 3, now);
+        filter.connect(audioCtx.destination);
+
+        const oscMain = audioCtx.createOscillator();
+        const gainMain = audioCtx.createGain();
+        oscMain.type = 'triangle';
+        oscMain.frequency.setValueAtTime(freq, now);
+        gainMain.gain.setValueAtTime(0, now);
+        gainMain.gain.linearRampToValueAtTime(0.18, now + 0.003); 
+        gainMain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2); 
+
+        oscMain.connect(gainMain);
+        gainMain.connect(filter);
+        oscMain.start(now);
+        oscMain.stop(now + 1.5);
     }
 
     function fillPixelCircle(context, centerX, centerY, radius, color) {
@@ -370,12 +249,7 @@
         for (let y = -radius; y <= radius; y += pixelSize) {
             for (let x = -radius; x <= radius; x += pixelSize) {
                 if (x * x + y * y <= r2) {
-                    context.fillRect(
-                        Math.floor((centerX + x) / pixelSize) * pixelSize,
-                        Math.floor((centerY + y) / pixelSize) * pixelSize,
-                        pixelSize,
-                        pixelSize
-                    );
+                    context.fillRect(Math.floor((centerX + x) / pixelSize) * pixelSize, Math.floor((centerY + y) / pixelSize) * pixelSize, pixelSize, pixelSize);
                 }
             }
         }
@@ -384,289 +258,367 @@
     function createBubbleTemplates() {
         const sizes = { gigantic: 110, huge: 85, large: 58, small: 30 };
         for (const [key, radius] of Object.entries(sizes)) {
-            const size = (radius + 10) * 2;
-            const offCanvas = document.createElement('canvas');
-            offCanvas.width = size; offCanvas.height = size;
-            const offCtx = offCanvas.getContext('2d');
+            const size = (radius + 15) * 2;
+            const off = document.createElement('canvas'); off.width = size; off.height = size;
+            const oCtx = off.getContext('2d');
             const center = size / 2;
-            fillPixelCircle(offCtx, center, center, radius, `rgba(255, 255, 255, 0.05)`);
-            offCtx.fillStyle = `rgba(255, 255, 255, 0.18)`;
-            const rOuter2 = (radius + 1) * (radius + 1);
-            const rInner2 = (radius - pixelSize) * (radius - pixelSize);
+            fillPixelCircle(oCtx, center, center, radius, `rgba(255, 255, 255, 0.06)`);
+            oCtx.fillStyle = `rgba(255, 255, 255, 0.22)`;
+            const rO2 = (radius + 1) * (radius + 1), rI2 = (radius - pixelSize) * (radius - pixelSize);
             for (let y = -radius; y <= radius; y += pixelSize) {
                 for (let x = -radius; x <= radius; x += pixelSize) {
-                    const d2 = x * x + y * y;
-                    if (d2 <= rOuter2 && d2 > rInner2) {
-                        offCtx.fillRect(Math.floor((center + x) / pixelSize) * pixelSize, Math.floor((center + y) / pixelSize) * pixelSize, pixelSize, pixelSize);
-                    }
+                    if (x*x + y*y <= rO2 && x*x + y*y > rI2) oCtx.fillRect(Math.floor((center+x)/pixelSize)*pixelSize, Math.floor((center+y)/pixelSize)*pixelSize, pixelSize, pixelSize);
                 }
             }
-            bubbleCache[key] = offCanvas;
+            bubbleCache[key] = off;
         }
     }
 
-    function drawNaturalRoundedHighLights(context, centerX, centerY, radius, hSeed, sizeType, alpha = 1) {
-        const s = pixelSize;
-        const shimmerAngle = Math.sin(globalTime * 0.0025 + hSeed) * 0.08; 
-        const shimmerDist = Math.cos(globalTime * 0.002 + hSeed) * (radius * 0.03); 
-        const baseAngle = -Math.PI * 0.7; 
-        const currentAngle = baseAngle + shimmerAngle;
-        const dist = (radius * 0.65) + shimmerDist;
-        const hX = centerX + Math.cos(currentAngle) * dist;
-        const hY = centerY + Math.sin(currentAngle) * dist;
-        
-        let mainRadius;
-        if (sizeType === 'gigantic') mainRadius = s * 2.8;
-        else if (sizeType === 'huge') mainRadius = s * 2.2;
-        else if (sizeType === 'large') mainRadius = s * 1.6;
-        else mainRadius = s * 0.9;
-
-        fillPixelCircle(context, hX, hY, mainRadius + s, `rgba(255, 255, 255, ${0.25 * alpha})`);
-        fillPixelCircle(context, hX, hY, mainRadius, `rgba(255, 255, 255, ${0.95 * alpha})`);
-        
-        const subAngle = currentAngle + 0.4 - shimmerAngle * 0.5;
-        const subDist = (dist * 0.85) - shimmerDist * 0.5;
-        const sX = centerX + Math.cos(subAngle) * subDist;
-        const sY = centerY + Math.sin(subAngle) * subDist;
-        fillPixelCircle(context, sX, sY, mainRadius * 0.45, `rgba(255, 255, 255, ${0.6 * alpha})`);
-
-        const rimAngle = (Math.PI / 3.5) - shimmerAngle * 0.2;
-        const rimDist = radius * 0.78;
-        const rX = centerX + Math.cos(rimAngle) * rimDist;
-        const rY = centerY + Math.sin(rimAngle) * rimDist; 
-        fillPixelCircle(context, rX, rY, s * 1.2, `rgba(255, 255, 255, ${0.4 * alpha})`);
-    }
-
-    function drawSoapBubble(context, centerX, centerY, radius, stretchX, stretchY, hSeed, sizeType, alpha = 1) {
+    function drawSoapBubble(context, centerX, centerY, radius, hSeed, sizeType, alpha = 1) {
         context.save();
         context.globalAlpha = alpha;
         const template = bubbleCache[sizeType];
-        if (template) {
-            const drawSizeW = template.width * stretchX;
-            const drawSizeH = template.height * stretchY;
-            context.drawImage(template, centerX - drawSizeW / 2, centerY - drawSizeH / 2, drawSizeW, drawSizeH);
-        }
-
-        const rX = radius * stretchX;
-        const coreDirectionX = Math.cos(hSeed);
-        const coreDirectionY = Math.sin(hSeed);
-        const coreOffsetDist = rX * 0.22;
-        const driftX = Math.cos(globalTime * 0.0015 + hSeed) * (rX * 0.08);
-        const driftY = Math.sin(globalTime * 0.0015 + hSeed) * (rX * 0.08);
-        fillPixelCircle(context, centerX + coreDirectionX * coreOffsetDist + driftX, centerY + coreDirectionY * coreOffsetDist + driftY, rX * 0.5, `rgba(255, 255, 255, 0.08)`);
-
-        drawNaturalRoundedHighLights(context, centerX, centerY, rX, hSeed, sizeType, 1);
+        if (template) context.drawImage(template, centerX - template.width/2, centerY - template.height/2);
+        const coreDirX = Math.cos(hSeed), coreDirY = Math.sin(hSeed);
+        const coreOff = radius * 0.2;
+        fillPixelCircle(context, centerX + coreDirX * coreOff, centerY + coreDirY * coreOff, radius * 0.6, `rgba(255, 255, 255, 0.08)`);
+        const s = pixelSize;
+        const currentAngle = -Math.PI * 0.7 + Math.sin(globalTime * 0.0025 + hSeed) * 0.08;
+        const dist = (radius * 0.65);
+        const hX = centerX + Math.cos(currentAngle) * dist, hY = centerY + Math.sin(currentAngle) * dist;
+        let mR = sizeType === 'gigantic' ? s*2.8 : sizeType === 'huge' ? s*2.2 : sizeType === 'large' ? s*1.6 : s*0.9;
+        fillPixelCircle(context, hX, hY, mR + s, `rgba(255, 255, 255, 0.3)`);
+        fillPixelCircle(context, hX, hY, mR, `rgba(255, 255, 255, 0.95)`);
+        const subAngle = currentAngle + 0.5;
+        const sX = centerX + Math.cos(subAngle) * (dist * 0.8), sY = centerY + Math.sin(subAngle) * (dist * 0.8);
+        fillPixelCircle(context, sX, sY, mR * 0.5, `rgba(255, 255, 255, 0.5)`);
         context.restore();
-    }
-
-    function drawScore(context, scoreText, centerX, centerY) {
-        context.save();
-        context.font = `bold 110px 'Silkscreen'`;
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        context.fillText(scoreText, centerX, centerY);
-        context.restore();
-    }
-
-    class Bubble {
-        constructor(x, y, sizeType = 'gigantic', vx = null, vy = null) {
-            this.x = x; this.y = y; this.sizeType = sizeType;
-            const rMap = { gigantic: 110, huge: 85, large: 58, small: 30 };
-            this.radius = rMap[sizeType] || 85;
-            this.vx = vx !== null ? vx : (Math.random() - 0.5) * 0.4;
-            
-            // 초기 대비 2.0배 속도: 2.4 + 1.6
-            this.vy = vy !== null ? vy : 2.4 + Math.random() * 1.6; 
-            this.baseVy = 2.4 + Math.random() * 1.6; 
-            
-            this.isDead = false; 
-            this.hSeed = Math.random() * 1000;
-            this.windOffset = Math.random() * Math.PI * 2;
-            this.windStrength = Math.random() * 0.8 + 0.4;
-            this.lifeTime = 0; 
-            this.isContacting = false;
-            this.isPopping = false;
-            this.popTimer = 30;
-        }
-        draw() {
-            let a = this.isPopping ? ((Math.floor(this.popTimer / 4) % 2 === 0) ? 1 : 0.3) : 1;
-            drawSoapBubble(ctx, this.x, this.y, this.radius, 1, 1, this.hSeed, this.sizeType, a);
-        }
-        startPopping() { if (!this.isPopping && !this.isDead) { this.isPopping = true; this.popTimer = 30; } }
-        
-        update(dt) {
-            this.lifeTime += dt;
-            if (this.isPopping) { 
-                this.popTimer -= dt; 
-                if (this.popTimer <= 0) { this.splitPop(); return; } 
-            }
-
-            if (!this.isContacting) {
-                if (this.vy < this.baseVy) {
-                    // 가속도 상향 (초기 0.22 -> 2.0배: 0.44)
-                    this.vy += 0.44 * dt;
-                    if (this.vy > this.baseVy) this.vy = this.baseVy;
-                }
-                const breeze = Math.sin(this.lifeTime * 0.015 + this.windOffset) * this.windStrength;
-                this.x += (this.vx + breeze) * dt; 
-                this.y += this.vy * dt; 
-                this.vx *= Math.pow(airFriction, dt);
-            } else {
-                this.vy += 0.015 * dt; 
-                this.vx *= Math.pow(fluidFriction, dt); 
-                this.vy *= Math.pow(fluidFriction, dt);
-                this.x += this.vx * dt; 
-                this.y += this.vy * dt;
-            }
-            if (this.x - this.radius < 0) { this.x = this.radius; this.vx *= -0.2; }
-            else if (this.x + this.radius > canvas.width) { this.x = canvas.width - this.radius; this.vx *= -0.2; }
-        }
-
-        splitPop() {
-            if (this.isDead) return;
-            initAudio(); playPopSound(this.sizeType); createParticles(this.x, this.y); this.isDead = true;
-            let next = null;
-            if (this.sizeType === 'gigantic') next = 'huge';
-            else if (this.sizeType === 'huge') next = 'large';
-            else if (this.sizeType === 'large') next = 'small';
-            
-            if (next) {
-                // 반발력 상향 (초기 대비 2.0배)
-                const forceX = 4.5 + Math.random() * 2.2; 
-                const bounceY = -11.2 - Math.random() * 3.8; 
-                bubbles.push(new Bubble(this.x - 20, this.y, next, -forceX, bounceY));
-                bubbles.push(new Bubble(this.x + 20, this.y, next, forceX, bounceY));
-            }
-            
-            if (this.sizeType === 'small') {
-                score += 1;
-            }
-        }
-        
-        resolveCollisions(others, dt) {
-            let supported = false;
-            if (this.y + this.radius >= canvas.height - 2) {
-                this.y = canvas.height - this.radius; this.vy *= -0.05; supported = true; this.isContacting = true; 
-            }
-            for (let other of others) {
-                if (other === this || other.isDead) continue;
-                const dx = this.x - other.x, dy = this.y - other.y, dist = Math.hypot(dx, dy), minDist = this.radius + other.radius;
-                if (dist < minDist) {
-                    if (!this.isContacting && other.isContacting) this.isContacting = true;
-                    if (this.isContacting && other.isContacting) {
-                        supported = true; const overlap = minDist - dist, nx = dx / dist, ny = dy / dist;
-                        if (this.y < other.y - this.radius * 0.4) {
-                            const slide = this.x > other.x ? 1 : -1; this.vx += slide * 0.1 * dt; this.vy += 0.02 * dt;
-                            this.x += nx * overlap * 0.2 * dt; this.y += ny * overlap * 0.2 * dt;
-                        } else {
-                            const pf = 0.35 * dt; this.x += nx * overlap * pf; this.y += ny * overlap * pf;
-                            other.x -= nx * overlap * pf; other.y -= ny * overlap * pf;
-                        }
-                    }
-                }
-            }
-            if (!supported && this.isContacting) this.isContacting = false;
-        }
-    }
-
-    class Particle {
-        constructor(x, y) {
-            this.x = x; this.y = y; this.size = pixelSize * (Math.floor(Math.random() * 2) + 1);
-            this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8; 
-            this.alpha = 1; this.decay = 0.05; this.color = `hsla(${Math.random() * 360}, 65%, 90%, 0.75)`;
-        }
-        update(dt) { 
-            this.x += this.vx * dt; 
-            this.y += this.vy * dt; 
-            this.alpha -= this.decay * dt; 
-        }
-        draw() {
-            ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
-            ctx.fillRect(Math.floor(this.x/pixelSize)*pixelSize, Math.floor(this.y/pixelSize)*pixelSize, this.size, this.size);
-            ctx.restore();
-        }
-    }
-
-    class BGStar {
-        constructor() { this.x = Math.random() * window.innerWidth; this.y = Math.random() * window.innerHeight; }
-        draw() {
-            const a = (Math.sin(globalTime * 0.003 + this.x) + 1) / 2 * 0.25;
-            ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
-            ctx.fillRect(Math.floor(this.x/pixelSize)*pixelSize, Math.floor(this.y/pixelSize)*pixelSize, pixelSize, pixelSize);
-        }
-    }
-
-    function createParticles(x, y) { for (let i = 0; i < 5; i++) particles.push(new Particle(x, y)); }
-
-    function resize() {
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        bgTwinkles = []; for(let i=0; i<40; i++) bgTwinkles.push(new BGStar());
-        createBubbleTemplates();
     }
 
     function checkClusters() {
         const visited = new Set();
-        for (let b of bubbles) {
-            if (visited.has(b) || b.isDead || b.isPopping) continue;
-            const cluster = [], queue = [b]; visited.add(b);
+        for (let i = 0; i < bubbles.length; i++) {
+            if (visited.has(i) || bubbles[i].isPopping || bubbles[i].isDead) continue;
+            const cluster = [];
+            const queue = [i];
+            visited.add(i);
             while (queue.length > 0) {
-                const cur = queue.shift(); cluster.push(cur);
-                for (let other of bubbles) {
-                    if (visited.has(other) || other.isDead || other.isPopping || other.sizeType !== cur.sizeType) continue;
-                    if (Math.hypot(cur.x - other.x, cur.y - other.y) < cur.radius + other.radius + 10) { visited.add(other); queue.push(other); }
+                const currIdx = queue.shift();
+                const curr = bubbles[currIdx];
+                cluster.push(currIdx);
+                for (let j = 0; j < bubbles.length; j++) {
+                    if (visited.has(j) || bubbles[j].isPopping || bubbles[j].isDead) continue;
+                    const other = bubbles[j];
+                    if (curr.sizeType === other.sizeType) {
+                        const dist = Math.hypot(curr.x - other.x, curr.y - other.y);
+                        if (dist < curr.radius + other.radius + 15) {
+                            visited.add(j);
+                            queue.push(j);
+                        }
+                    }
                 }
             }
-            if (cluster.length >= 3) cluster.forEach(cb => cb.startPopping());
+            if (cluster.length >= 3) {
+                cluster.forEach(idx => {
+                    if (!bubbles[idx].isPopping) bubbles[idx].triggerPop();
+                });
+            }
         }
     }
 
-    function update(timestamp) {
-        if (!lastTime) lastTime = timestamp;
-        const deltaTime = timestamp - lastTime;
-        lastTime = timestamp;
-        const dt = deltaTime / (1000 / 60);
+    class Bubble {
+        constructor(x, y, sizeType = 'small', vx = null, vy = null) {
+            this.x = x; this.y = y; this.sizeType = sizeType;
+            const rMap = { gigantic: 110, huge: 85, large: 58, small: 30 };
+            this.radius = rMap[sizeType];
+            
+            let speedFactor = 1.0;
+            if (sizeType === 'huge') speedFactor = 0.8;
+            else if (sizeType === 'large') speedFactor = 0.64;
+            else if (sizeType === 'small') speedFactor = 0.512;
 
-        globalTime = Date.now();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        bgTwinkles.forEach(t => t.draw());
-        
-        // 생성 빈도도 속도에 맞춰 약간 상향 (초기 대비 1.5배)
-        if (Math.random() < 0.028 * dt && bubbles.length < 150) { 
-            const x = Math.random() * canvas.width;
-            const opts = ['gigantic', 'huge', 'large', 'small'];
-            bubbles.push(new Bubble(x, -150, opts[Math.floor(Math.random() * opts.length)]));
+            const globalSlowDown = 0.28224; 
+            this.baseGravity = 0.025 * speedFactor * globalSlowDown; 
+            const speedScale = 0.175 * speedFactor * globalSlowDown;
+            const rawSpeed = (1.0 + Math.random() * 0.2);
+            this.vy = vy !== null ? vy : rawSpeed * speedScale;
+
+            if (vx === null) {
+                const patternPicker = Math.random();
+                if (patternPicker < 0.5) {
+                    this.pattern = 'zigzag';
+                    this.vx = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.1) * globalSlowDown * 2;
+                } else {
+                    this.pattern = 'sway';
+                    this.vx = (Math.random() - 0.5) * 0.1 * globalSlowDown * 2;
+                    this.swayOffset = Math.random() * Math.PI * 2;
+                    this.swayStrength = (0.15 + Math.random() * 0.2) * globalSlowDown * 2;
+                }
+            } else {
+                this.pattern = 'sway';
+                this.vx = vx * 0.8; 
+                this.swayOffset = Math.random() * Math.PI * 2;
+                this.swayStrength = 0.1 * globalSlowDown * 2;
+            }
+            
+            this.isDead = false; 
+            this.hSeed = Math.random() * 1000; 
+            this.lifeTime = 0; 
+            this.isPopping = false; 
+            this.popTimer = 25;
         }
 
-        bubbles.forEach(b => b.resolveCollisions(bubbles, dt));
-        checkClusters();
+        draw() {
+            let a = this.isPopping ? ((Math.floor(this.popTimer / 4) % 2 === 0) ? 1 : 0.3) : 1;
+            drawSoapBubble(ctx, this.x, this.y, this.radius, this.hSeed, this.sizeType, a);
+        }
+
+        update() {
+            this.lifeTime++;
+            if (this.isPopping && --this.popTimer <= 0) this.splitPop();
+            
+            this.vy += this.baseGravity;
+            this.y += this.vy; 
+            
+            if (this.pattern === 'zigzag') {
+                this.x += this.vx;
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.vx = Math.abs(this.vx);
+                } else if (this.x + this.radius > LOGICAL_WIDTH) {
+                    this.x = LOGICAL_WIDTH - this.radius;
+                    this.vx = -Math.abs(this.vx);
+                }
+            } else {
+                const sway = Math.sin(this.lifeTime * 0.015 + this.swayOffset) * this.swayStrength * 5;
+                this.x += this.vx + sway;
+                if (this.x - this.radius < 0) { 
+                    this.x = this.radius; 
+                    this.vx *= -0.2; 
+                } else if (this.x + this.radius > LOGICAL_WIDTH) { 
+                    this.x = LOGICAL_WIDTH - this.radius; 
+                    this.vx *= -0.2; 
+                }
+            }
+            
+            if (this.y - this.radius > LOGICAL_HEIGHT) {
+                this.isDead = true;
+                if (!isGameOver) {
+                    const damageMap = { small: 1, large: 2, huge: 4, gigantic: 8 };
+                    hp -= damageMap[this.sizeType] || 1;
+                    if (hp <= 0) {
+                        hp = 0;
+                        handleGameOver();
+                    }
+                }
+            }
+        }
+
+        triggerPop() {
+            if (this.isPopping) return;
+            this.isPopping = true;
+            this.popTimer = 15 + Math.random() * 15;
+        }
+
+        splitPop() {
+            if (this.isDead) return; 
+            this.isDead = true; 
+            playPopSound(this.sizeType);
+            for(let i=0; i<6; i++) particles.push(new Particle(this.x, this.y));
+            let next = this.sizeType === 'gigantic' ? 'huge' : this.sizeType === 'huge' ? 'large' : this.sizeType === 'large' ? 'small' : null;
+            if (next) { 
+                // 분열 시 튀어오르는 높이 10% 감소 (0.6 -> 0.54)
+                const bounceStrength = 0.54; 
+                bubbles.push(new Bubble(this.x - 25, this.y, next, -0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
+                bubbles.push(new Bubble(this.x + 25, this.y, next, 0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
+            } else { 
+                score += 1; 
+            }
+        }
+    }
+
+    class Particle {
+        constructor(x, y) { 
+            this.x = x; this.y = y; this.size = pixelSize; 
+            this.vx = (Math.random()-0.5)*8; 
+            this.vy = (Math.random()-0.5)*8; 
+            this.alpha = 1; this.decay = 0.04; 
+        }
+        update() { this.x += this.vx; this.y += this.vy; this.alpha -= this.decay; }
+        draw() { 
+            ctx.save(); ctx.globalAlpha = this.alpha; ctx.fillStyle = 'white'; 
+            ctx.fillRect(Math.floor(this.x/pixelSize)*pixelSize, Math.floor(this.y/pixelSize)*pixelSize, pixelSize, pixelSize); 
+            ctx.restore(); 
+        }
+    }
+
+    function updateLayout() {
+        const aspect = 4/3, w = window.innerWidth, h = window.innerHeight;
+        const container = document.getElementById('game-container');
+        if (w/h > aspect) { container.style.height = h + 'px'; container.style.width = (h * aspect) + 'px'; }
+        else { container.style.width = w + 'px'; container.style.height = (w / aspect) + 'px'; }
+        canvas.width = LOGICAL_WIDTH; canvas.height = LOGICAL_HEIGHT;
+    }
+
+    function drawLifeBar() {
+        const barHeight = 12; 
+        const x = 0;
+        const y = 0;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.fillRect(x, y, LOGICAL_WIDTH, barHeight);
+        const currentWidth = (hp / MAX_HP) * LOGICAL_WIDTH;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.fillRect(x, y, currentWidth, barHeight);
+    }
+
+    async function handleGameOver() {
+        isGameOver = true;
+        if (db && user) {
+            try {
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                let r = []; snap.forEach(d => r.push(d.data()));
+                r.sort((a,b) => b.score - a.score);
+                if (r.length < 10 || score > (r[9]?.score || 0)) {
+                    openRanking(true);
+                }
+            } catch(e) {}
+        }
+    }
+
+    function update() {
+        globalTime = Date.now();
+        ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+        bgTwinkles.forEach(t => { 
+            const a = (Math.sin(globalTime*0.003+t.x)+1)/2*0.25; 
+            ctx.fillStyle = `rgba(255,255,255,${a})`; 
+            ctx.fillRect(Math.floor(t.x/pixelSize)*pixelSize, Math.floor(t.y/pixelSize)*pixelSize, pixelSize, pixelSize); 
+        });
+        
+        if (!isGameOver && Math.random() < 0.0156 && bubbles.length < 100) {
+            const r = Math.random();
+            let s = r < 0.40 ? 'small' : r < 0.70 ? 'large' : r < 0.95 ? 'huge' : 'gigantic';
+            bubbles.push(new Bubble(Math.random()*LOGICAL_WIDTH, -150, s));
+        }
+
+        checkClusters(); 
+        
         bubbles = bubbles.filter(b => !b.isDead);
-        bubbles.forEach(b => { b.update(dt); b.draw(); });
+        bubbles.forEach(b => { 
+            if (!isGameOver) b.update(); 
+            b.draw(); 
+        });
         
         particles = particles.filter(p => p.alpha > 0);
-        particles.forEach(p => { p.update(dt); p.draw(); });
+        particles.forEach(p => { p.update(); p.draw(); });
 
-        drawScore(ctx, score.toString(), canvas.width / 2, 120);
+        ctx.font = "bold 77px 'Silkscreen'"; ctx.textAlign = "center"; ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fillText(score.toString(), LOGICAL_WIDTH/2, 140);
+
+        drawLifeBar();
+
+        if (isGameOver) {
+            ctx.font = "bold 80px 'Silkscreen'";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            ctx.fillText("GAME OVER", LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+            ctx.font = "bold 30px 'Silkscreen'";
+            ctx.fillText("TAP TO RESTART", LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 60);
+        }
         requestAnimationFrame(update);
     }
 
-    function handleInteraction(ex, ey) {
-        const rect = canvas.getBoundingClientRect();
-        const mx = ex - rect.left, my = ey - rect.top;
-        initAudio();
-        for (let i = bubbles.length - 1; i >= 0; i--) {
-            const b = bubbles[i];
-            if (Math.hypot(mx - b.x, my - b.y) < b.radius + 50) { b.splitPop(); break; }
-        }
+    function restartGame() {
+        score = 0;
+        hp = MAX_HP;
+        bubbles = [];
+        particles = [];
+        isGameOver = false;
+        closeRanking();
     }
+
+    window.openRanking = async (isNewRecord = false) => { 
+        document.getElementById('ranking-modal').style.display = 'block'; 
+        const inputArea = document.getElementById('input-area');
+        const modalTitle = document.getElementById('modal-title');
+        
+        if (isNewRecord) {
+            modalTitle.innerText = "NEW RECORD!";
+            inputArea.style.display = 'flex';
+        } else {
+            modalTitle.innerText = "WORLD TOP 10";
+            inputArea.style.display = 'none';
+        }
+        refreshRanking(); 
+    };
+    
+    window.closeRanking = () => {
+        document.getElementById('ranking-modal').style.display = 'none';
+    };
+    
+    async function refreshRanking() {
+        if (!db || !user) return;
+        const l = document.getElementById('ranking-list'); l.innerHTML = "<li>UPDATING...</li>";
+        try {
+            const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+            let r = []; snap.forEach(d => r.push(d.data()));
+            r.sort((a,b) => b.score - a.score);
+            const top = r.slice(0, 10); l.innerHTML = top.length ? "" : "<li>NO RECORDS</li>";
+            top.forEach((it, i) => { 
+                const li = document.createElement('li'); 
+                li.innerHTML = `<span>${i+1}</span><span>${it.name}</span><span>${it.score}</span>`; 
+                l.appendChild(li); 
+            });
+        } catch(e) { l.innerHTML = "<li>ERROR</li>"; }
+    }
+
+    window.submitScore = async () => {
+        const n = document.getElementById('name-input').value.trim();
+        if(!db || !user || !n || score === 0) return;
+        try { 
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), { 
+                uid: user.uid, name: n, score, timestamp: Date.now() 
+            }); 
+            document.getElementById('name-input').value = ""; 
+            document.getElementById('input-area').style.display = 'none';
+            document.getElementById('modal-title').innerText = "WORLD TOP 10";
+            refreshRanking(); 
+        } catch(e) {}
+    };
 
     window.onload = async () => {
+        updateLayout(); createBubbleTemplates();
+        for(let i=0; i<40; i++) bgTwinkles.push({x: Math.random()*LOGICAL_WIDTH, y: Math.random()*LOGICAL_HEIGHT});
         await setupFirebase();
-        resize();
-        window.addEventListener('resize', resize);
-        canvas.addEventListener('mousedown', (e) => handleInteraction(e.clientX, e.clientY));
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInteraction(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-        requestAnimationFrame(update);
+        window.addEventListener('resize', updateLayout);
+        
+        const handleInteraction = (coordX, coordY) => {
+            initAudio(); 
+            if (isGameOver) {
+                if (document.getElementById('ranking-modal').style.display !== 'block') {
+                    restartGame();
+                }
+                return;
+            }
+            const r = canvas.getBoundingClientRect();
+            const mx = (coordX - r.left) * (LOGICAL_WIDTH / r.width), 
+                  my = (coordY - r.top) * (LOGICAL_HEIGHT / r.height);
+            
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const b = bubbles[i];
+                if (!b.isPopping && !b.isDead && Math.hypot(mx - b.x, my - b.y) < b.radius + 50) { 
+                    b.splitPop(); 
+                }
+            }
+        };
+        
+        canvas.addEventListener('mousedown', e => handleInteraction(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', e => { 
+            e.preventDefault(); 
+            for (let i = 0; i < e.touches.length; i++) {
+                handleInteraction(e.touches[i].clientX, e.touches[i].clientY);
+            }
+        }, {passive: false});
+
+        update();
     };
 </script>
 </body>
