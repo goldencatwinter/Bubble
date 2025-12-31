@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubble Pop - Zen Flow Edition</title>
+    <title>Bubble Pop - Zen Flow Edition (3:4)</title>
     <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -23,8 +23,7 @@
 
         #game-container {
             position: relative;
-            width: 1024px;
-            height: 768px;
+            /* 세로형 비율 유지를 위해 초기 너비/높이 설정 제거 후 JS에서 처리 */
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
             overflow: hidden;
         }
@@ -71,18 +70,17 @@
             z-index: 10;
         }
 
-        /* 랭킹 버튼 수정: 테두리 제거 및 초기 상태 숨김 */
         .ranking-btn {
-            display: none; /* 초기 상태 숨김 */
+            display: none;
             position: absolute;
             top: 40px;
             right: 20px;
             padding: 10px 18px;
             background: transparent;
-            border: none; /* 테두리 제거 */
+            border: none;
             color: rgba(255, 255, 255, 0.7);
             font-family: 'Silkscreen', cursive;
-            font-size: 16px; /* 가독성을 위해 살짝 키움 */
+            font-size: 16px;
             cursor: pointer;
             pointer-events: auto;
             backdrop-filter: blur(4px);
@@ -162,7 +160,6 @@
     <div id="game-wrapper">
         <div class="overlay"></div>
         <div id="ui-layer">
-            <!-- 랭킹 버튼 아이디 추가 -->
             <button id="rank-btn-ui" class="ranking-btn" onclick="openRanking()">RANKING</button>
         </div>
         <canvas id="gameCanvas"></canvas>
@@ -212,8 +209,10 @@
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const LOGICAL_WIDTH = 1024;
-    const LOGICAL_HEIGHT = 768;
+    
+    // 화면 비율 변경: 가로 768, 세로 1024 (3:4 비율)
+    const LOGICAL_WIDTH = 768;
+    const LOGICAL_HEIGHT = 1024;
 
     let score = 0;
     let hp = 30;
@@ -221,7 +220,6 @@
     let bubbles = [], particles = [], bgTwinkles = [], globalTime = 0, audioCtx = null;
     let isGameOver = false;
 
-    // Delta Time 설정 (기준: 30 FPS)
     let lastTime = performance.now();
     const TARGET_FPS = 30;
 
@@ -349,15 +347,12 @@
             const rMap = { gigantic: 110, huge: 85, large: 58, small: 30 };
             this.radius = rMap[sizeType];
             
-            // 속도 2배 상향을 위한 베이스 팩터
             const speedBoost = 2.0;
-            
             let speedFactor = 1.0;
             if (sizeType === 'huge') speedFactor = 0.8;
             else if (sizeType === 'large') speedFactor = 0.64;
             else if (sizeType === 'small') speedFactor = 0.512;
 
-            // 중력 및 초기 낙하 속도
             this.baseGravity = 0.15 * speedFactor * speedBoost; 
             const speedScale = 1.2 * speedFactor * speedBoost;
             const rawSpeed = (1.0 + Math.random() * 0.2);
@@ -481,11 +476,18 @@
     }
 
     function updateLayout() {
-        const aspect = 4/3, w = window.innerWidth, h = window.innerHeight;
+        // 화면비율을 세로 4: 가로 3 (0.75)으로 설정
+        const aspect = 3/4, w = window.innerWidth, h = window.innerHeight;
         const container = document.getElementById('game-container');
-        if (w/h > aspect) { container.style.height = h + 'px'; container.style.width = (h * aspect) + 'px'; }
-        else { container.style.width = w + 'px'; container.style.height = (w / aspect) + 'px'; }
-        canvas.width = LOGICAL_WIDTH; canvas.height = LOGICAL_HEIGHT;
+        if (w/h > aspect) { 
+            container.style.height = h + 'px'; 
+            container.style.width = (h * aspect) + 'px'; 
+        } else { 
+            container.style.width = w + 'px'; 
+            container.style.height = (w / aspect) + 'px'; 
+        }
+        canvas.width = LOGICAL_WIDTH; 
+        canvas.height = LOGICAL_HEIGHT;
     }
 
     function drawLifeBar() {
@@ -499,7 +501,6 @@
 
     async function handleGameOver() {
         isGameOver = true;
-        // 게임 오버 시 랭킹 버튼 보이기
         document.getElementById('rank-btn-ui').style.display = 'block';
         
         if (db && user) {
@@ -568,7 +569,6 @@
     function restartGame() {
         score = 0; hp = MAX_HP; bubbles = []; particles = [];
         isGameOver = false; 
-        // 재시작 시 랭킹 버튼 숨기기
         document.getElementById('rank-btn-ui').style.display = 'none';
         closeRanking();
     }
