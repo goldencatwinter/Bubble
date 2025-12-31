@@ -213,9 +213,9 @@
     let bubbles = [], particles = [], bgTwinkles = [], globalTime = 0, audioCtx = null;
     let isGameOver = false;
 
-    // Delta Time variables
+    // Delta Time 설정 (기준: 30 FPS)
     let lastTime = performance.now();
-    const TARGET_FPS = 60; // 60프레임을 기준으로 물리 연산 수치 조절
+    const TARGET_FPS = 30;
 
     const pixelSize = 6;
     const bubbleCache = {};
@@ -341,44 +341,49 @@
             const rMap = { gigantic: 110, huge: 85, large: 58, small: 30 };
             this.radius = rMap[sizeType];
             
+            // 속도 2배 상향을 위한 베이스 팩터
+            const speedBoost = 2.0;
+            
             let speedFactor = 1.0;
             if (sizeType === 'huge') speedFactor = 0.8;
             else if (sizeType === 'large') speedFactor = 0.64;
             else if (sizeType === 'small') speedFactor = 0.512;
 
-            const globalSlowDown = 0.28224; 
-            this.baseGravity = 0.025 * speedFactor * globalSlowDown; 
-            const speedScale = 0.175 * speedFactor * globalSlowDown;
+            // 중력 및 초기 낙하 속도 (오리지널 물리치 복구 및 속도 상향)
+            this.baseGravity = 0.15 * speedFactor * speedBoost; 
+            const speedScale = 1.2 * speedFactor * speedBoost;
             const rawSpeed = (1.0 + Math.random() * 0.2);
+            
+            // 분열 시 위로 튕기기 위해 전달받은 vy가 있으면 그대로 사용
             this.vy = vy !== null ? vy : rawSpeed * speedScale;
 
             if (vx === null) {
                 const patternPicker = Math.random();
                 if (patternPicker < 0.5) {
                     this.pattern = 'zigzag';
-                    this.vx = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.1) * globalSlowDown * 2;
+                    this.vx = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.4) * speedBoost;
                 } else {
                     this.pattern = 'sway';
-                    this.vx = (Math.random() - 0.5) * 0.1 * globalSlowDown * 2;
+                    this.vx = (Math.random() - 0.5) * 0.4 * speedBoost;
                     this.swayOffset = Math.random() * Math.PI * 2;
-                    this.swayStrength = (0.15 + Math.random() * 0.2) * globalSlowDown * 2;
+                    this.swayStrength = (0.6 + Math.random() * 0.8) * speedBoost;
                 }
             } else {
                 this.pattern = 'sway';
-                this.vx = vx * 0.8; 
+                this.vx = vx; 
                 this.swayOffset = Math.random() * Math.PI * 2;
-                this.swayStrength = 0.1 * globalSlowDown * 2;
+                this.swayStrength = 0.4 * speedBoost;
             }
             
             this.isDead = false; 
             this.hSeed = Math.random() * 1000; 
             this.lifeTime = 0; 
             this.isPopping = false; 
-            this.popTimer = 25;
+            this.popTimer = 12; 
         }
 
         draw() {
-            let a = this.isPopping ? ((Math.floor(this.popTimer / 4) % 2 === 0) ? 1 : 0.3) : 1;
+            let a = this.isPopping ? ((Math.floor(this.popTimer / 2) % 2 === 0) ? 1 : 0.3) : 1;
             drawSoapBubble(ctx, this.x, this.y, this.radius, this.hSeed, this.sizeType, a);
         }
 
@@ -402,7 +407,7 @@
                     this.vx = -Math.abs(this.vx);
                 }
             } else {
-                const sway = Math.sin(this.lifeTime * 0.015 + this.swayOffset) * this.swayStrength * 5;
+                const sway = Math.sin(this.lifeTime * 0.05 + this.swayOffset) * this.swayStrength * 3;
                 this.x += (this.vx + sway) * dt;
                 if (this.x - this.radius < 0) { 
                     this.x = this.radius; 
@@ -413,6 +418,7 @@
                 }
             }
             
+            // 화면 아래로 나가면 데미지
             if (this.y - this.radius > LOGICAL_HEIGHT) {
                 this.isDead = true;
                 if (!isGameOver) {
@@ -429,7 +435,7 @@
         triggerPop() {
             if (this.isPopping) return;
             this.isPopping = true;
-            this.popTimer = 15 + Math.random() * 15;
+            this.popTimer = 8 + Math.random() * 6;
         }
 
         splitPop() {
@@ -437,11 +443,13 @@
             this.isDead = true; 
             playPopSound(this.sizeType);
             for(let i=0; i<6; i++) particles.push(new Particle(this.x, this.y));
+            
             let next = this.sizeType === 'gigantic' ? 'huge' : this.sizeType === 'huge' ? 'large' : this.sizeType === 'large' ? 'small' : null;
             if (next) { 
-                const bounceStrength = 0.54; 
-                bubbles.push(new Bubble(this.x - 25, this.y, next, -0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
-                bubbles.push(new Bubble(this.x + 25, this.y, next, 0.4, (-2.5 - Math.random() * 2) * bounceStrength)); 
+                // 분열 시 위로 튕겨 올라가는 물리 효과 (vy 값을 음수로 설정)
+                const bounceUpPower = -8.0 - Math.random() * 5.0; 
+                bubbles.push(new Bubble(this.x - 30, this.y, next, -1.2, bounceUpPower)); 
+                bubbles.push(new Bubble(this.x + 30, this.y, next, 1.2, bounceUpPower)); 
             } else { 
                 score += 1; 
             }
@@ -451,9 +459,9 @@
     class Particle {
         constructor(x, y) { 
             this.x = x; this.y = y; this.size = pixelSize; 
-            this.vx = (Math.random()-0.5)*8; 
-            this.vy = (Math.random()-0.5)*8; 
-            this.alpha = 1; this.decay = 0.04; 
+            this.vx = (Math.random()-0.5)*20; 
+            this.vy = (Math.random()-0.5)*20; 
+            this.alpha = 1; this.decay = 0.06; 
         }
         update(dt) { 
             this.x += this.vx * dt; 
@@ -477,13 +485,11 @@
 
     function drawLifeBar() {
         const barHeight = 12; 
-        const x = 0;
-        const y = 0;
         ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-        ctx.fillRect(x, y, LOGICAL_WIDTH, barHeight);
+        ctx.fillRect(0, 0, LOGICAL_WIDTH, barHeight);
         const currentWidth = (hp / MAX_HP) * LOGICAL_WIDTH;
         ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
-        ctx.fillRect(x, y, currentWidth, barHeight);
+        ctx.fillRect(0, 0, currentWidth, barHeight);
     }
 
     async function handleGameOver() {
@@ -502,12 +508,10 @@
 
     let spawnTimer = 0;
     function update(timestamp) {
-        // Calculate Delta Time
         const dt = (timestamp - lastTime) / (1000 / TARGET_FPS);
         lastTime = timestamp;
         
-        // Skip huge jumps (like when switching tabs)
-        const frameDt = Math.min(dt, 3.0);
+        const frameDt = Math.min(dt, 2.5);
 
         globalTime = Date.now();
         ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -519,9 +523,10 @@
         
         if (!isGameOver) {
             spawnTimer += frameDt;
-            if (spawnTimer >= 32 && bubbles.length < 100) { 
+            // 속도가 빨라졌으므로 스폰 주기도 조금 당김
+            if (spawnTimer >= 14 && bubbles.length < 100) { 
                 const r = Math.random();
-                let s = r < 0.40 ? 'small' : r < 0.70 ? 'large' : r < 0.95 ? 'huge' : 'gigantic';
+                let s = r < 0.35 ? 'small' : r < 0.65 ? 'large' : r < 0.90 ? 'huge' : 'gigantic';
                 bubbles.push(new Bubble(Math.random()*LOGICAL_WIDTH, -150, s));
                 spawnTimer = 0;
             }
@@ -554,32 +559,20 @@
     }
 
     function restartGame() {
-        score = 0;
-        hp = MAX_HP;
-        bubbles = [];
-        particles = [];
-        isGameOver = false;
-        closeRanking();
+        score = 0; hp = MAX_HP; bubbles = []; particles = [];
+        isGameOver = false; closeRanking();
     }
 
     window.openRanking = async (isNewRecord = false) => { 
         document.getElementById('ranking-modal').style.display = 'block'; 
         const inputArea = document.getElementById('input-area');
         const modalTitle = document.getElementById('modal-title');
-        
-        if (isNewRecord) {
-            modalTitle.innerText = "NEW RECORD!";
-            inputArea.style.display = 'flex';
-        } else {
-            modalTitle.innerText = "WORLD TOP 10";
-            inputArea.style.display = 'none';
-        }
+        if (isNewRecord) { modalTitle.innerText = "NEW RECORD!"; inputArea.style.display = 'flex'; } 
+        else { modalTitle.innerText = "WORLD TOP 10"; inputArea.style.display = 'none'; }
         refreshRanking(); 
     };
     
-    window.closeRanking = () => {
-        document.getElementById('ranking-modal').style.display = 'none';
-    };
+    window.closeRanking = () => document.getElementById('ranking-modal').style.display = 'none';
     
     async function refreshRanking() {
         if (!db || !user) return;
@@ -620,29 +613,22 @@
         const handleInteraction = (coordX, coordY) => {
             initAudio(); 
             if (isGameOver) {
-                if (document.getElementById('ranking-modal').style.display !== 'block') {
-                    restartGame();
-                }
+                if (document.getElementById('ranking-modal').style.display !== 'block') restartGame();
                 return;
             }
             const r = canvas.getBoundingClientRect();
             const mx = (coordX - r.left) * (LOGICAL_WIDTH / r.width), 
                   my = (coordY - r.top) * (LOGICAL_HEIGHT / r.height);
-            
             for (let i = bubbles.length - 1; i >= 0; i--) {
                 const b = bubbles[i];
-                if (!b.isPopping && !b.isDead && Math.hypot(mx - b.x, my - b.y) < b.radius + 50) { 
-                    b.splitPop(); 
-                }
+                if (!b.isPopping && !b.isDead && Math.hypot(mx - b.x, my - b.y) < b.radius + 60) b.splitPop();
             }
         };
         
         canvas.addEventListener('mousedown', e => handleInteraction(e.clientX, e.clientY));
         canvas.addEventListener('touchstart', e => { 
             e.preventDefault(); 
-            for (let i = 0; i < e.touches.length; i++) {
-                handleInteraction(e.touches[i].clientX, e.touches[i].clientY);
-            }
+            for (let i = 0; i < e.touches.length; i++) handleInteraction(e.touches[i].clientX, e.touches[i].clientY);
         }, {passive: false});
 
         lastTime = performance.now();
